@@ -891,8 +891,6 @@ class SearchQuery(BaseSearchQuery):
             query = xapian.Query('')
         else:
             for the_filter in self.query_filters:
-                query_op = None
-
                 if the_filter.is_and():
                     query_op = xapian.Query.OP_AND
 
@@ -901,6 +899,8 @@ class SearchQuery(BaseSearchQuery):
 
                 if the_filter.is_not():
                     query_op = xapian.Query.OP_AND_NOT
+
+                value = the_filter.value
 
                 if not isinstance(value, (list, tuple)):
                     # Convert whatever we find to what xapian wants.
