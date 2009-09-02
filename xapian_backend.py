@@ -913,12 +913,26 @@ class SearchQuery(BaseSearchQuery):
                 if the_filter.field == 'content':
                     query = xapian.Query(value)
                 else:
-                    query = xapian.Query('%s%s%s', (
-                            DOCUMENT_CUSTOM_TERM_PREFIX, 
-                            the_filter.field.upper(),
-                            value
+                    #                     'gte': '%s:%s..*',
+                    #                     'gt': 'NOT %s:..%s',
+                    #                     'lte': '%s:..%s',
+                    #                     'lt': 'NOT %s:%s..*',
+                    #                     'startswith': '%s:%s*',
+                    if the_filter.filter_type == 'exact':
+                        query = xapian.Query('%s%s%s', (
+                                DOCUMENT_CUSTOM_TERM_PREFIX, 
+                                the_filter.field.upper(),
+                                value
+                            )
                         )
-                    )
+                    elif the_filter.filter_type == 'gte':
+                        query = xapian.Query(xapian.Query.OP_VALUE_GE, 0, value)
+                    elif the_filter.filter_type == 'gt':
+                        query = xapian.Query(xapian.Query.OP_VALUE_GE, 0, value)
+                    elif the_filter.filter_type == 'lte':
+                        query = xapian.Query(xapian.Query.OP_VALUE_LE, 0, value)
+                    elif the_filter.filter_type == 'lt':
+                        query = xapian.Query(xapian.Query.OP_VALUE_LE, 0, value)
 
                 if final_query:
                     final_query = xapian.Query(query_op, final_query, query)
