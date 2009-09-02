@@ -926,13 +926,13 @@ class SearchQuery(BaseSearchQuery):
                             )
                         )
                     elif the_filter.filter_type == 'gte':
-                        query = xapian.Query(xapian.Query.OP_VALUE_GE, 0, value)
+                        query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
                     elif the_filter.filter_type == 'gt':
-                        query = xapian.Query(xapian.Query.OP_VALUE_GE, 0, value)
+                        query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
                     elif the_filter.filter_type == 'lte':
-                        query = xapian.Query(xapian.Query.OP_VALUE_LE, 0, value)
+                        query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
                     elif the_filter.filter_type == 'lt':
-                        query = xapian.Query(xapian.Query.OP_VALUE_LE, 0, value)
+                        query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
 
                 if final_query:
                     final_query = xapian.Query(query_op, final_query, query)
