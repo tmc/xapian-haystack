@@ -885,10 +885,10 @@ class SearchQuery(BaseSearchQuery):
         Returns:
             A xapian.Query use by Xapian.
         """
-        query = None
+        final_query = None
         
         if not self.query_filters:
-            query = xapian.Query('')
+            final_query = xapian.Query('')
         else:
             for the_filter in self.query_filters:
                 if the_filter.is_and():
@@ -912,11 +912,25 @@ class SearchQuery(BaseSearchQuery):
 
                 if the_filter.field == 'content':
                     query = xapian.Query(value)
-    
-                if query:
-                    query = xapian.Query(query_op, query, value)
                 else:
-                    query = xapian.Query(value)
+                    query = xapian.Query('%s%s%s', (
+                            DOCUMENT_CUSTOM_TERM_PREFIX, 
+                            the_filter.field.upper(),
+                            value
+                        )
+                    )
+
+                if final_query:
+                    final_query = xapian.Query(query_op, final_query, query)
+                else:
+                    if the_filter.is_not():
+                        query = xapian.Query(query_op, xapian.Query(''), query)
+                    final_query = query
+    
+        print final_query.get_description()
+        
+        return final_query
+
         #     
         #     query_chunks = []
         #     
