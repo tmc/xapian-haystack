@@ -155,6 +155,7 @@ class SearchBackend(BaseSearchBackend):
             os.makedirs(settings.HAYSTACK_XAPIAN_PATH)
         
         self.stemmer = xapian.Stem(stemming_language)
+        self.content_field_name, self.schema = None, None
     
     def get_identifier(self, obj_or_string):
         return DOCUMENT_ID_TERM_PREFIX + super(SearchBackend, self).get_identifier(obj_or_string)
@@ -853,6 +854,9 @@ class SearchBackend(BaseSearchBackend):
         
         Returns an integer with the column location (0 indexed).
         """
+        if not self.schema:
+            self.content_field_name, self.schema = self.build_schema(self.site.all_searchfields())
+
         for field_dict in self.schema:
             if field_dict['field_name'] == field:
                 return field_dict['column']
@@ -926,7 +930,11 @@ class SearchQuery(BaseSearchQuery):
                             )
                         )
                     elif the_filter.filter_type == 'gte':
-                        query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
+                        query = xapian.Query(
+                            xapian.Query.OP_VALUE_RANGE, 
+                            self.backend._value_column(the_filter.field), 
+                            value, value
+                        )
                     elif the_filter.filter_type == 'gt':
                         query = xapian.Query(xapian.Query.OP_VALUE_RANGE, 0, value, value)
                     elif the_filter.filter_type == 'lte':

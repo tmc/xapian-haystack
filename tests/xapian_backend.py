@@ -159,7 +159,7 @@ class XapianSearchBackendTestCase(TestCase):
         # Wildcard -- All
         self.assertEqual(self.sb.search('*')['hits'], 3)
         self.assertEqual([result.pk for result in self.sb.search('*')['results']], [1, 2, 3])
-        
+
         # NOT operator
         self.assertEqual([result.pk for result in self.sb.search('NOT name:david1')['results']], [2, 3])
         self.assertEqual([result.pk for result in self.sb.search('NOT name:david1 AND index')['results']], [2, 3])
@@ -179,7 +179,7 @@ class XapianSearchBackendTestCase(TestCase):
         self.assertEqual([result.pk for result in self.sb.search('index value:10..*')['results']], [2, 3])
         self.assertEqual([result.pk for result in self.sb.search('index popularity:..100.0')['results']], [2])
         self.assertEqual([result.pk for result in self.sb.search('index popularity:100.0..*')['results']], [1, 3])
-
+        import pdb; pdb.set_trace()
     def test_field_facets(self):
         self.sb.update(self.msi, self.sample_objs)
         self.assertEqual(len(self.xapian_search('')), 3)
