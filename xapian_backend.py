@@ -935,95 +935,47 @@ class SearchQuery(BaseSearchQuery):
         super(SearchQuery, self).__init__(backend=backend)
         self.backend = backend or SearchBackend()
     
-    def build_query(self):
+    def build_query_fragment(self, field, filter_type, value):
         """
-        Builds a search query from previously set values, returning a query
-        string in a format ready for use by the Xapian `SearchBackend`.
+        Builds a search query fragment from a field, filter type and value.
         
         Returns:
-            A query string suitable for parsing by Xapian.
+            A query string fragment suitable for parsing by Xapian.
         """
-        query = ''
+        result = ''
+
+        if not isinstance(value, (list, tuple)):
+            # Convert whatever we find to what xapian wants.
+            value = self.backend._marshal_value(value)
         
-        if not self.query_filters:
-            query = '*'
+        # Check to see if it's a phrase for an exact match.
+        if ' ' in value:
+            value = '"%s"' % value
+        
+        # 'content' is a special reserved word, much like 'pk' in
+        # Django's ORM layer. It indicates 'no special field'.
+        if field == 'content':
+            result = value
         else:
-            query_chunks = []
-            
-            for the_filter in self.query_filters:
-                if the_filter.is_and():
-                    query_chunks.append('AND')
+            filter_types = {
+                'exact': '%s:%s',
+                'gte': '%s:%s..*',
+                'gt': 'NOT %s:..%s',
+                'lte': '%s:..%s',
+                'lt': 'NOT %s:%s..*',
+                'startswith': '%s:%s*',
+            }
 
-                if the_filter.is_or():
-                    query_chunks.append('OR')
+            if filter_type != 'in':
+                result = filter_types[filter_type] % (field, value)
+            else:
+                in_options = []
+                for possible_value in value:
+                    in_options.append('%s:%s' % (field, possible_value))
+                result = '(%s)' % ' OR '.join(in_options)
 
-                if the_filter.is_not() and the_filter.field == 'content':
-                    query_chunks.append('NOT')
+        return result
 
-                value = the_filter.value
-                
-                if not isinstance(value, (list, tuple)):
-                    # Convert whatever we find to what xapian wants.
-                    value = self.backend._marshal_value(value)
-                
-                # Check to see if it's a phrase for an exact match.
-                if ' ' in value:
-                    value = '"%s"' % value
-                
-                # 'content' is a special reserved word, much like 'pk' in
-                # Django's ORM layer. It indicates 'no special field'.
-                if the_filter.field == 'content':
-                    query_chunks.append(value)
-                else:
-                    if the_filter.is_not():
-                        query_chunks.append('AND')
-                        filter_types = {
-                            'exact': 'NOT %s:%s',
-                            'gte': 'NOT %s:%s..*',
-                            'gt': '%s:..%s',
-                            'lte': 'NOT %s:..%s',
-                            'lt': '%s:%s..*',
-                            'startswith': 'NOT %s:%s*',
-                        }
-                    else:
-                        filter_types = {
-                            'exact': '%s:%s',
-                            'gte': '%s:%s..*',
-                            'gt': 'NOT %s:..%s',
-                            'lte': '%s:..%s',
-                            'lt': 'NOT %s:%s..*',
-                            'startswith': '%s:%s*',
-                        }
-
-                    if the_filter.filter_type != 'in':
-                        query_chunks.append(filter_types[the_filter.filter_type] % (the_filter.field, value))
-                    else:
-                        in_options = []
-                        if the_filter.is_not():                        
-                            for possible_value in value:
-                                in_options.append('%s:%s' % (the_filter.field, possible_value))
-                            query_chunks.append('NOT %s' % ' NOT '.join(in_options))
-                        else:
-                            for possible_value in value:
-                                in_options.append('%s:%s' % (the_filter.field, possible_value))
-                            query_chunks.append('(%s)' % ' OR '.join(in_options))
-            
-            if query_chunks[0] in ('AND', 'OR'):
-                # Pull off an undesirable leading "AND" or "OR".
-                del(query_chunks[0])
-            
-            query = ' '.join(query_chunks)
-        
-        if len(self.models):
-            models = ['django_ct:%s.%s' % (model._meta.app_label, model._meta.module_name) for model in self.models]
-            models_clause = ' '.join(models)
-            final_query = '(%s) %s' % (query, models_clause)
-        
-        else:
-            final_query = query
-        
-        return final_query
-    
     def run(self, spelling_query=None):
         """
         Builds and executes the query. Returns a list of search results.
